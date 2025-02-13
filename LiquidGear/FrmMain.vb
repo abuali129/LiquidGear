@@ -154,7 +154,7 @@ Public Class FrmMain
                 End If
             Next
             If PACB_Offset = 0 Then
-                If Not Silent_Mode Then MessageBox.Show("Formato não suportado!" & Environment.NewLine & File_Name, "Erro!", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                If Not Silent_Mode Then MessageBox.Show("Unsupported format!" & Environment.NewLine & File_Name, "Error!", MessageBoxButtons.OK, MessageBoxIcon.Error)
                 Input.Close()
                 Format = SDT.Unknow
                 Exit Sub
@@ -586,116 +586,110 @@ Public Class FrmMain
         Next
     End Sub
     
-    Private Sub BatchExport(directoryPath As String, extractAudio As Boolean)
-        If Not Directory.Exists(directoryPath) Then
-            MessageBox.Show("The specified directory does not exist.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-            Return
-        End If
+    Private Async Sub BatchExport(directoryPath As String, extractAudio As Boolean)
+        Dim progressForm As New ProgressForm()
+        progressForm.Show()
     
-        Dim sdtFiles() As String = Directory.GetFiles(directoryPath, "*.sdt")
-        For Each sdtFile As String In sdtFiles
-            Try
-                ' Open the .sdt file
-                Open(sdtFile, True)
+        Try
+            If Not Directory.Exists(directoryPath) Then
+                progressForm.LogMessage("The specified directory does not exist.")
+                Return
+            End If
     
-                ' Check if the file contains any dialog text
-                Dim hasDialogs As Boolean = False
-                Select Case Format
-                    Case SDT.Codec
-                        hasDialogs = Dialogs.Count > 0
-                    Case SDT.Vox
-                        hasDialogs = Vox_Dialogs.Count > 0
-                End Select
+            Dim sdtFiles() As String = Directory.GetFiles(directoryPath, "*.sdt")
+            Dim totalFiles As Integer = sdtFiles.Length
+            Dim processedFiles As Integer = 0
     
-                If Not hasDialogs Then
-                    Continue For
-                End If
+            For Each sdtFile As String In sdtFiles
+                If progressForm.CancellationToken.IsCancellationRequested Then Exit For
     
-                ' Export dialog texts to a .txt file
-                Dim out As New StringBuilder
-                Select Case Format
-                    Case SDT.Codec
-                        For Each dialog As String In Dialogs
-                            out.AppendLine("[texto]")
-                            out.AppendLine(LanguageMap(0) & vbTab & dialog) ' Default to [ENG] for Codec format
-                            out.AppendLine("[/texto]")
-                        Next
-                    Case SDT.Vox
-                        For Each dialog As Vox_Dialog In Vox_Dialogs
-                            If LanguageMap.ContainsKey(dialog.Language_ID) Then
-                                out.AppendLine("[texto]")
-                                out.AppendLine(LanguageMap(dialog.Language_ID) & vbTab & dialog.Text)
-                                out.AppendLine("[/texto]")
-                            Else
-                                MessageBox.Show($"Unknown Language_ID: {dialog.Language_ID}", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning)
-                            End If
-                        Next
-                End Select
-    
-                ' Save the .txt file in the same directory as the .sdt file
-                Dim txtFileName As String = Path.Combine(Path.GetDirectoryName(sdtFile), Path.GetFileNameWithoutExtension(sdtFile) & ".txt")
-                File.WriteAllText(txtFileName, out.ToString())
-    
-                ' Optionally export audio data to a .wav file
-                If extractAudio Then
-                    Dim wavFileName As String = Path.Combine(Path.GetDirectoryName(sdtFile), Path.GetFileNameWithoutExtension(sdtFile) & ".wav")
-                    Export_Wave(wavFileName)
-                End If
-    
-            Catch ex As Exception
-                MessageBox.Show($"Failed to process file: {sdtFile}" & Environment.NewLine & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-            End Try
-        Next
-    
-        MessageBox.Show("Batch export completed successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information)
-    End Sub
-    
-    Private Sub BatchImport(directoryPath As String)
-        If Not Directory.Exists(directoryPath) Then
-            MessageBox.Show("The specified directory does not exist.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-            Return
-        End If
-    
-        Dim sdtFiles() As String = Directory.GetFiles(directoryPath, "*.sdt")
-        Dim txtFiles() As String = Directory.GetFiles(directoryPath, "*.txt")
-    
-        Dim insertionCount As Integer = 0
-    
-        For Each sdtFile As String In sdtFiles
-            Dim txtFile As String = Path.Combine(directoryPath, Path.GetFileNameWithoutExtension(sdtFile) & ".txt")
-            If File.Exists(txtFile) Then
                 Try
-                    ' Open the .sdt file
+                    progressForm.LogMessage($"Extracting text from: {Path.GetFileName(sdtFile)}")
                     Open(sdtFile, True)
     
-                    ' Check if the file contains any dialog text
-                    Dim hasDialogs As Boolean = False
+                    ' Export dialog texts to a .txt file
+                    Dim out As New StringBuilder
                     Select Case Format
                         Case SDT.Codec
-                            hasDialogs = Dialogs.Count > 0
+                            For Each dialog As String In Dialogs
+                                out.AppendLine("[texto]")
+                                out.AppendLine(LanguageMap(0) & vbTab & dialog)
+                                out.AppendLine("[/texto]")
+                            Next
                         Case SDT.Vox
-                            hasDialogs = Vox_Dialogs.Count > 0
+                            For Each dialog As Vox_Dialog In Vox_Dialogs
+                                If LanguageMap.ContainsKey(dialog.Language_ID) Then
+                                    out.AppendLine("[texto]")
+                                    out.AppendLine(LanguageMap(dialog.Language_ID) & vbTab & dialog.Text)
+                                    out.AppendLine("[/texto]")
+                                Else
+                                    progressForm.LogMessage($"Unknown Language_ID: {dialog.Language_ID}")
+                                End If
+                            Next
                     End Select
     
-                    If Not hasDialogs Then
-                        MessageBox.Show($"Skipping file (no dialogs): {sdtFile}", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information)
-                        Continue For
+                    Dim txtFileName As String = Path.Combine(Path.GetDirectoryName(sdtFile), Path.GetFileNameWithoutExtension(sdtFile) & ".txt")
+                    File.WriteAllText(txtFileName, out.ToString())
+    
+                    If extractAudio Then
+                        Dim wavFileName As String = Path.Combine(Path.GetDirectoryName(sdtFile), Path.GetFileNameWithoutExtension(sdtFile) & ".wav")
+                        Export_Wave(wavFileName)
                     End If
     
-                    ' Import dialog texts from the .txt file
-                    ImportWithLanguage(txtFile, True)
-    
-                    ' Save the updated .sdt file in the same directory
-                    Save(sdtFile)
-                    insertionCount += 1
+                    processedFiles += 1
+                    progressForm.UpdateProgress(processedFiles, totalFiles)
     
                 Catch ex As Exception
-                    MessageBox.Show($"Failed to process file: {sdtFile}" & Environment.NewLine & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                    progressForm.LogMessage($"Failed to extract text from: {sdtFile}" & Environment.NewLine & ex.Message)
                 End Try
-            End If
-        Next
+            Next
     
-        MessageBox.Show($"Batch import completed successfully! {insertionCount} file(s) updated.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            progressForm.LogMessage("Extracting text completed successfully!")
+    
+        Finally
+            progressForm.Close()
+        End Try
+    End Sub
+    
+    Private Async Sub BatchImport(directoryPath As String)
+        Dim progressForm As New ProgressForm()
+        progressForm.Show()
+    
+        Try
+            If Not Directory.Exists(directoryPath) Then
+                progressForm.LogMessage("The specified directory does not exist.")
+                Return
+            End If
+    
+            Dim sdtFiles() As String = Directory.GetFiles(directoryPath, "*.sdt")
+            Dim totalFiles As Integer = sdtFiles.Length
+            Dim processedFiles As Integer = 0
+    
+            For Each sdtFile As String In sdtFiles
+                If progressForm.CancellationToken.IsCancellationRequested Then Exit For
+    
+                Dim txtFile As String = Path.Combine(directoryPath, Path.GetFileNameWithoutExtension(sdtFile) & ".txt")
+                If File.Exists(txtFile) Then
+                    Try
+                        progressForm.LogMessage($"Injecting text into: {Path.GetFileName(sdtFile)}")
+                        Open(sdtFile, True)
+                        ImportWithLanguage(txtFile, True)
+                        Save(sdtFile)
+    
+                        processedFiles += 1
+                        progressForm.UpdateProgress(processedFiles, totalFiles)
+    
+                    Catch ex As Exception
+                        progressForm.LogMessage($"Failed to Inject text into: {sdtFile}" & Environment.NewLine & ex.Message)
+                    End Try
+                End If
+            Next
+    
+            progressForm.LogMessage("Injecting text completed successfully!")
+    
+        Finally
+            progressForm.Close()
+        End Try
     End Sub
     
     Private Sub ImportWithLanguage(File_Name As String, Optional Silent_Mode As Boolean = False)
