@@ -1,4 +1,4 @@
-﻿Imports System.IO
+Imports System.IO
 Imports System.Text
 Imports System.Text.RegularExpressions
 Public Class FrmMain
@@ -85,7 +85,7 @@ Public Class FrmMain
 
     Private Sub BtnOpen_Click(sender As Object, e As EventArgs) Handles BtnOpen.Click
         Dim OpenDlg As New OpenFileDialog
-        OpenDlg.Filter = "Script do MGS|*.sdt"
+        OpenDlg.Filter = "MGS Script|*.sdt"
         If OpenDlg.ShowDialog = DialogResult.OK AndAlso File.Exists(OpenDlg.FileName) Then
             Open(OpenDlg.FileName, False)
         End If
@@ -205,7 +205,7 @@ Public Class FrmMain
     Private Sub BtnSave_Click(sender As Object, e As EventArgs) Handles BtnSave.Click
         Apply()
         Save(Current_Opened_File)
-        MessageBox.Show("O arquivo foi alterado com sucesso!", "Feito", MessageBoxButtons.OK, MessageBoxIcon.Information)
+        MessageBox.Show("The file has been successfully changed!", "Done", MessageBoxButtons.OK, MessageBoxIcon.Information)
     End Sub
     Private Sub Save(File_Name As String)
         Dim Output As New FileStream(File_Name, FileMode.Create)
@@ -312,26 +312,8 @@ Public Class FrmMain
         Output.Close()
     End Sub
 
-    Private Sub BtnExport_Click(sender As Object, e As EventArgs) Handles BtnExport.Click
-        Dim Out As New StringBuilder
-        Select Case Format
-            Case SDT.Codec
-                For Each Dialog As String In Dialogs
-                    Out.AppendLine("[texto]" & Environment.NewLine & Dialog & Environment.NewLine & "[/texto]")
-                Next
-            Case SDT.Vox
-                For Each Dialog As Vox_Dialog In Vox_Dialogs
-                    Out.AppendLine("[texto]" & Environment.NewLine & Dialog.Text & Environment.NewLine & "[/texto]")
-                Next
-        End Select
 
-        Dim SaveDlg As New SaveFileDialog
-        SaveDlg.Filter = "Texto|*.txt"
-        If SaveDlg.ShowDialog = DialogResult.OK Then
-            File.WriteAllText(SaveDlg.FileName, Out.ToString())
-            Export_Wave(SaveDlg.FileName & ".wav")
-        End If
-    End Sub
+
     Private Sub Export_Wave(Wave_File As String)
         If VAG1_Section Is Nothing Then Exit Sub
 
@@ -427,37 +409,10 @@ Public Class FrmMain
 
     Private Sub BtnImport_Click(sender As Object, e As EventArgs) Handles BtnImport.Click
         Dim OpenDlg As New OpenFileDialog
-        OpenDlg.Filter = "Texto|*.txt"
+        OpenDlg.Filter = "Text|*.txt"
         If OpenDlg.ShowDialog = DialogResult.OK AndAlso File.Exists(OpenDlg.FileName) Then
             Import(OpenDlg.FileName)
         End If
-    End Sub
-    Private Sub Import(File_Name As String, Optional Silent_Mode As Boolean = False)
-        Dim Text As String = File.ReadAllText(File_Name)
-        Dim Dlgs As MatchCollection = Regex.Matches(Text, "\[texto\]\r\n(.+?)(\r\n)?\[/texto\]", RegexOptions.Singleline)
-        Dim Index As Integer
-
-        If Format = SDT.Codec Then
-            DialogList.Items.Clear()
-            Dialogs = New List(Of String)
-        End If
-
-        For Each Dlg As Match In Dlgs
-            Dim Data As String = Dlg.Groups(1).Value
-            If Data = Environment.NewLine Then Data = Nothing
-
-            Select Case Format
-                Case SDT.Codec
-                    Dialogs.Add(Data)
-                    If Not Silent_Mode Then DialogList.Items.Add("0x???????? [" & Crop_Text(Data) & "]")
-                Case SDT.Vox
-                    Dim Temp() As Vox_Dialog = Vox_Dialogs.ToArray()
-                    Temp(Index).Text = Data
-                    Vox_Dialogs = Temp.ToList()
-            End Select
-
-            Index += 1
-        Next
     End Sub
 
     Private Sub FrmMain_Load(sender As Object, e As EventArgs) Handles MyBase.Load
@@ -511,8 +466,8 @@ Public Class FrmMain
 
         End If
 
-        If Dumped Then MessageBox.Show("Arquivos dumpados com sucesso!", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information)
-        If Inserted Then MessageBox.Show("Foram inseridos " & Insertion_Count & " arquivo(s)!", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information)
+        If Dumped Then MessageBox.Show("Files dumped successfully!", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Information)
+        If Inserted Then MessageBox.Show("Successfully inserted " & Insertion_Count & " file(s)!", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Information)
     End Sub
 
     Private Function Adapt_Text(Text As String) As Byte()
@@ -541,4 +496,243 @@ Public Class FrmMain
                 (Data(Address + 2) * &H100) Or
                 Data(Address + 3)
     End Function
+	
+    ' Batch Export Functionality
+
+    
+    Private Sub BtnBatchExport_Click(sender As Object, e As EventArgs) Handles BtnBatchExport.Click
+        Dim folderDlg As New FolderBrowserDialog
+        If folderDlg.ShowDialog = DialogResult.OK Then
+            BatchExport(folderDlg.SelectedPath, True) ' Set to False if you don't want to extract audio
+        End If
+    End Sub
+    
+    Private Sub BtnBatchImport_Click(sender As Object, e As EventArgs) Handles BtnBatchImport.Click
+        Dim folderDlg As New FolderBrowserDialog
+        If folderDlg.ShowDialog = DialogResult.OK Then
+            BatchImport(folderDlg.SelectedPath)
+        End If
+    End Sub
+
+    Private ReadOnly LanguageMap As New Dictionary(Of UInt16, String) From {
+        {1, "[ENG]"},
+        {2, "[FRE]"},
+        {3, "[GRE]"},
+        {4, "[ITA]"},
+        {5, "[SPA]"}
+    }
+    
+    Private Sub BtnExport_Click(sender As Object, e As EventArgs) Handles BtnExport.Click
+        Dim Out As New StringBuilder
+        Select Case Format
+            Case SDT.Codec
+                For Each Dialog As String In Dialogs
+                    Out.AppendLine("[texto]")
+                    Out.AppendLine(LanguageMap(0) & vbTab & Dialog) ' Default to [ENG] for Codec format
+                    Out.AppendLine("[/texto]")
+                Next
+            Case SDT.Vox
+                For Each Dialog As Vox_Dialog In Vox_Dialogs
+                    If LanguageMap.ContainsKey(Dialog.Language_ID) Then
+                        Out.AppendLine("[texto]")
+                        Out.AppendLine(LanguageMap(Dialog.Language_ID) & vbTab & Dialog.Text)
+                        Out.AppendLine("[/texto]")
+                    Else
+                        MessageBox.Show($"Unknown Language_ID: {Dialog.Language_ID}", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                    End If
+                Next
+        End Select
+    
+        Dim SaveDlg As New SaveFileDialog
+        SaveDlg.Filter = "Text|*.txt"
+        If SaveDlg.ShowDialog = DialogResult.OK Then
+            File.WriteAllText(SaveDlg.FileName, Out.ToString())
+            Export_Wave(SaveDlg.FileName & ".wav")
+        End If
+    End Sub
+    
+    Private Sub Import(File_Name As String, Optional Silent_Mode As Boolean = False)
+        Dim Text As String = File.ReadAllText(File_Name)
+        Dim Dlgs As MatchCollection = Regex.Matches(Text, "\[texto\]\r\n(\[[A-Z]{3}\])\t(.+?)(\r\n)?\[/texto\]", RegexOptions.Singleline)
+        Dim Index As Integer
+    
+        If Format = SDT.Codec Then
+            DialogList.Items.Clear()
+            Dialogs = New List(Of String)
+        End If
+    
+        For Each Dlg As Match In Dlgs
+            Dim LanguageCode As String = Dlg.Groups(1).Value
+            Dim Data As String = Dlg.Groups(2).Value
+    
+            Dim LanguageID As UInt16 = LanguageMap.FirstOrDefault(Function(x) x.Value = LanguageCode).Key
+            If LanguageID = 0 AndAlso Not LanguageMap.ContainsValue(LanguageCode) Then
+                MessageBox.Show($"Unknown Language Code: {LanguageCode}", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                Continue For
+            End If
+    
+            Select Case Format
+                Case SDT.Codec
+                    Dialogs.Add(Data)
+                    If Not Silent_Mode Then DialogList.Items.Add("0x???????? [" & Crop_Text(Data) & "]")
+                Case SDT.Vox
+                    Dim Temp() As Vox_Dialog = Vox_Dialogs.ToArray()
+                    Temp(Index).Text = Data
+                    Temp(Index).Language_ID = LanguageID
+                    Vox_Dialogs = Temp.ToList()
+            End Select
+    
+            Index += 1
+        Next
+    End Sub
+    
+    Private Sub BatchExport(directoryPath As String, extractAudio As Boolean)
+        If Not Directory.Exists(directoryPath) Then
+            MessageBox.Show("The specified directory does not exist.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            Return
+        End If
+    
+        Dim sdtFiles() As String = Directory.GetFiles(directoryPath, "*.sdt")
+        For Each sdtFile As String In sdtFiles
+            Try
+                ' Open the .sdt file
+                Open(sdtFile, True)
+    
+                ' Check if the file contains any dialog text
+                Dim hasDialogs As Boolean = False
+                Select Case Format
+                    Case SDT.Codec
+                        hasDialogs = Dialogs.Count > 0
+                    Case SDT.Vox
+                        hasDialogs = Vox_Dialogs.Count > 0
+                End Select
+    
+                If Not hasDialogs Then
+                    Continue For
+                End If
+    
+                ' Export dialog texts to a .txt file
+                Dim out As New StringBuilder
+                Select Case Format
+                    Case SDT.Codec
+                        For Each dialog As String In Dialogs
+                            out.AppendLine("[texto]")
+                            out.AppendLine(LanguageMap(0) & vbTab & dialog) ' Default to [ENG] for Codec format
+                            out.AppendLine("[/texto]")
+                        Next
+                    Case SDT.Vox
+                        For Each dialog As Vox_Dialog In Vox_Dialogs
+                            If LanguageMap.ContainsKey(dialog.Language_ID) Then
+                                out.AppendLine("[texto]")
+                                out.AppendLine(LanguageMap(dialog.Language_ID) & vbTab & dialog.Text)
+                                out.AppendLine("[/texto]")
+                            Else
+                                MessageBox.Show($"Unknown Language_ID: {dialog.Language_ID}", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                            End If
+                        Next
+                End Select
+    
+                ' Save the .txt file in the same directory as the .sdt file
+                Dim txtFileName As String = Path.Combine(Path.GetDirectoryName(sdtFile), Path.GetFileNameWithoutExtension(sdtFile) & ".txt")
+                File.WriteAllText(txtFileName, out.ToString())
+    
+                ' Optionally export audio data to a .wav file
+                If extractAudio Then
+                    Dim wavFileName As String = Path.Combine(Path.GetDirectoryName(sdtFile), Path.GetFileNameWithoutExtension(sdtFile) & ".wav")
+                    Export_Wave(wavFileName)
+                End If
+    
+            Catch ex As Exception
+                MessageBox.Show($"Failed to process file: {sdtFile}" & Environment.NewLine & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            End Try
+        Next
+    
+        MessageBox.Show("Batch export completed successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information)
+    End Sub
+    
+    Private Sub BatchImport(directoryPath As String)
+        If Not Directory.Exists(directoryPath) Then
+            MessageBox.Show("The specified directory does not exist.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            Return
+        End If
+    
+        Dim sdtFiles() As String = Directory.GetFiles(directoryPath, "*.sdt")
+        Dim txtFiles() As String = Directory.GetFiles(directoryPath, "*.txt")
+    
+        Dim insertionCount As Integer = 0
+    
+        For Each sdtFile As String In sdtFiles
+            Dim txtFile As String = Path.Combine(directoryPath, Path.GetFileNameWithoutExtension(sdtFile) & ".txt")
+            If File.Exists(txtFile) Then
+                Try
+                    ' Open the .sdt file
+                    Open(sdtFile, True)
+    
+                    ' Check if the file contains any dialog text
+                    Dim hasDialogs As Boolean = False
+                    Select Case Format
+                        Case SDT.Codec
+                            hasDialogs = Dialogs.Count > 0
+                        Case SDT.Vox
+                            hasDialogs = Vox_Dialogs.Count > 0
+                    End Select
+    
+                    If Not hasDialogs Then
+                        MessageBox.Show($"Skipping file (no dialogs): {sdtFile}", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                        Continue For
+                    End If
+    
+                    ' Import dialog texts from the .txt file
+                    ImportWithLanguage(txtFile, True)
+    
+                    ' Save the updated .sdt file in the same directory
+                    Save(sdtFile)
+                    insertionCount += 1
+    
+                Catch ex As Exception
+                    MessageBox.Show($"Failed to process file: {sdtFile}" & Environment.NewLine & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                End Try
+            End If
+        Next
+    
+        MessageBox.Show($"Batch import completed successfully! {insertionCount} file(s) updated.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information)
+    End Sub
+    
+    Private Sub ImportWithLanguage(File_Name As String, Optional Silent_Mode As Boolean = False)
+        Dim Text As String = File.ReadAllText(File_Name)
+        Dim Dlgs As MatchCollection = Regex.Matches(Text, "\[texto\]\r\n(\[[A-Z]{3}\])\t(.+?)(\r\n)?\[/texto\]", RegexOptions.Singleline)
+        Dim Index As Integer
+    
+        If Format = SDT.Codec Then
+            DialogList.Items.Clear()
+            Dialogs = New List(Of String)
+        End If
+    
+        For Each Dlg As Match In Dlgs
+            Dim LanguageCode As String = Dlg.Groups(1).Value
+            Dim Data As String = Dlg.Groups(2).Value
+    
+            Dim LanguageID As UInt16 = LanguageMap.FirstOrDefault(Function(x) x.Value = LanguageCode).Key
+            If LanguageID = 0 AndAlso Not LanguageMap.ContainsValue(LanguageCode) Then
+                MessageBox.Show($"Unknown Language Code: {LanguageCode}", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                Continue For
+            End If
+    
+            Select Case Format
+                Case SDT.Codec
+                    Dialogs.Add(Data)
+                    If Not Silent_Mode Then DialogList.Items.Add("0x???????? [" & Crop_Text(Data) & "]")
+                Case SDT.Vox
+                    Dim Temp() As Vox_Dialog = Vox_Dialogs.ToArray()
+                    Temp(Index).Text = Data
+                    Temp(Index).Language_ID = LanguageID
+                    Vox_Dialogs = Temp.ToList()
+            End Select
+    
+            Index += 1
+        Next
+    End Sub
+    
+    
+	
 End Class
