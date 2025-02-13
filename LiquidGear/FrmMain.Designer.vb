@@ -1,4 +1,4 @@
-﻿<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()> _
+<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()> _
 Partial Class FrmMain
     Inherits LiquidGear.gdkForm
 
@@ -19,6 +19,38 @@ Partial Class FrmMain
     'Não o modifique usando o editor de códigos.
     <System.Diagnostics.DebuggerStepThrough()> _
     Private Sub InitializeComponent()
+        Me.BtnBatchExport = New System.Windows.Forms.Button()
+        Me.BtnBatchImport = New System.Windows.Forms.Button()
+		
+        'BtnBatchImport
+        '
+        Me.BtnBatchImport.Location = New System.Drawing.Point(300, 60)
+        Me.BtnBatchImport.Name = "BtnBatchImport"
+        Me.BtnBatchImport.Size = New System.Drawing.Size(220, 30)
+        Me.BtnBatchImport.TabIndex = 1
+        Me.BtnBatchImport.Text = "Mass Inject (Inject *.txt into *.sdt)"
+        Me.BtnBatchImport.UseVisualStyleBackColor = True
+        '
+        'BtnBatchExport
+        '
+        Me.BtnBatchExport.Location = New System.Drawing.Point(300, 100)
+        Me.BtnBatchExport.Name = "BtnBatchExport"
+        Me.BtnBatchExport.Size = New System.Drawing.Size(220, 30)
+        Me.BtnBatchExport.TabIndex = 0
+        Me.BtnBatchExport.Text = "Mass Export (Extract *.txt from *.sdt)"
+        Me.BtnBatchExport.UseVisualStyleBackColor = True
+        '
+        '
+        'FrmMain
+        '
+        Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
+        Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
+        Me.ClientSize = New System.Drawing.Size(800, 450)
+        Me.Controls.Add(Me.BtnBatchImport)
+        Me.Controls.Add(Me.BtnBatchExport)
+        Me.Name = "FrmMain"
+        Me.Text = "LiquidGear"
+        Me.ResumeLayout(False)
         Me.TxtDialogs = New System.Windows.Forms.TextBox()
         Me.DialogList = New System.Windows.Forms.ListView()
         Me.CDiags = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
@@ -30,9 +62,9 @@ Partial Class FrmMain
         '
         'LblTitle
         '
-        Me.LblTitle.Location = New System.Drawing.Point(4, 4)
+        Me.LblTitle.Location = New System.Drawing.Point(100, 4)
         Me.LblTitle.Size = New System.Drawing.Size(273, 19)
-        Me.LblTitle.Text = "LiquidGear build 20/03/15 #1 by gdkchan"
+        Me.LblTitle.Text = "LiquidGear#1 by gdkchan, improve by VHussain 13.02.2025"
         '
         'TxtDialogs
         '
@@ -57,7 +89,7 @@ Partial Class FrmMain
         '
         'CDiags
         '
-        Me.CDiags.Text = "Diálogos"
+        Me.CDiags.Text = "Diálogos/الحوارات"
         Me.CDiags.Width = 175
         '
         'BtnOpen
@@ -66,7 +98,7 @@ Partial Class FrmMain
         Me.BtnOpen.Name = "BtnOpen"
         Me.BtnOpen.Size = New System.Drawing.Size(80, 24)
         Me.BtnOpen.TabIndex = 13
-        Me.BtnOpen.Text = "&Abrir"
+        Me.BtnOpen.Text = "&Open"
         Me.BtnOpen.UseVisualStyleBackColor = True
         '
         'BtnSave
@@ -76,7 +108,7 @@ Partial Class FrmMain
         Me.BtnSave.Name = "BtnSave"
         Me.BtnSave.Size = New System.Drawing.Size(80, 24)
         Me.BtnSave.TabIndex = 14
-        Me.BtnSave.Text = "&Salvar"
+        Me.BtnSave.Text = "&Save"
         Me.BtnSave.UseVisualStyleBackColor = True
         '
         'BtnExport
@@ -86,7 +118,7 @@ Partial Class FrmMain
         Me.BtnExport.Name = "BtnExport"
         Me.BtnExport.Size = New System.Drawing.Size(80, 24)
         Me.BtnExport.TabIndex = 15
-        Me.BtnExport.Text = "&Exportar"
+        Me.BtnExport.Text = "&Export"
         Me.BtnExport.UseVisualStyleBackColor = True
         '
         'BtnImport
@@ -96,7 +128,7 @@ Partial Class FrmMain
         Me.BtnImport.Name = "BtnImport"
         Me.BtnImport.Size = New System.Drawing.Size(80, 24)
         Me.BtnImport.TabIndex = 16
-        Me.BtnImport.Text = "&Importar"
+        Me.BtnImport.Text = "&Import"
         Me.BtnImport.UseVisualStyleBackColor = True
         '
         'FrmMain
@@ -129,5 +161,7 @@ Partial Class FrmMain
     Friend WithEvents BtnSave As System.Windows.Forms.Button
     Friend WithEvents BtnExport As System.Windows.Forms.Button
     Friend WithEvents BtnImport As System.Windows.Forms.Button
+    Friend WithEvents BtnBatchExport As Button
+    Friend WithEvents BtnBatchImport As Button
 
 End Class
