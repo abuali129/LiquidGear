@@ -21,15 +21,6 @@ Partial Class FrmMain
     Private Sub InitializeComponent()
         Me.BtnBatchExport = New System.Windows.Forms.Button()
         Me.BtnBatchImport = New System.Windows.Forms.Button()
-		
-        'BtnBatchImport
-        '
-        Me.BtnBatchImport.Location = New System.Drawing.Point(300, 60)
-        Me.BtnBatchImport.Name = "BtnBatchImport"
-        Me.BtnBatchImport.Size = New System.Drawing.Size(220, 30)
-        Me.BtnBatchImport.TabIndex = 1
-        Me.BtnBatchImport.Text = "Mass Inject (Inject *.txt into *.sdt)"
-        Me.BtnBatchImport.UseVisualStyleBackColor = True
         '
         'BtnBatchExport
         '
@@ -37,9 +28,17 @@ Partial Class FrmMain
         Me.BtnBatchExport.Name = "BtnBatchExport"
         Me.BtnBatchExport.Size = New System.Drawing.Size(220, 30)
         Me.BtnBatchExport.TabIndex = 0
-        Me.BtnBatchExport.Text = "Mass Export (Extract *.txt from *.sdt)"
+        Me.BtnBatchExport.Text = "Export text from .sdt"
         Me.BtnBatchExport.UseVisualStyleBackColor = True
         '
+        'BtnBatchImport
+        '
+        Me.BtnBatchImport.Location = New System.Drawing.Point(300, 60)
+        Me.BtnBatchImport.Name = "BtnBatchImport"
+        Me.BtnBatchImport.Size = New System.Drawing.Size(220, 30)
+        Me.BtnBatchImport.TabIndex = 1
+        Me.BtnBatchImport.Text = "Inject text from .txt into .sdt"
+        Me.BtnBatchImport.UseVisualStyleBackColor = True
         '
         'FrmMain
         '
