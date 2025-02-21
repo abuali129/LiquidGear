@@ -34,6 +34,22 @@ Public Class FrmMain
     End Structure
     Dim Vox_Dialogs As List(Of Vox_Dialog)
 
+    Private Function GetLanguageCode(Language_ID As UInt16) As String
+        Dim LanguageMap As New Dictionary(Of UInt16, String) From {
+            {5, "[SPA]"},
+            {4, "[ITA]"},
+            {3, "[GER]"},
+            {2, "[FER]"},
+            {1, "[ENG]"}
+        }
+    
+        If LanguageMap.ContainsKey(Language_ID) Then
+            Return LanguageMap(Language_ID)
+        Else
+            Return $"[Unknown_Language_ID_{Language_ID}]"
+        End If
+    End Function
+
     Dim Header() As Byte
     Dim VAG1_Section() As Byte
 
@@ -608,14 +624,41 @@ Public Class FrmMain
     
                 ' Prepare the output text
                 Dim out As New StringBuilder
+                Dim fileName As String = Path.GetFileNameWithoutExtension(sdtFile)
+    
                 Select Case Format
                     Case SDT.Codec
+                        Dim lineNumber As Integer = 1
                         For Each dialog As String In Dialogs
-                            out.AppendLine("[texto]" & Environment.NewLine & dialog & Environment.NewLine & "[/texto]")
+                            Dim lines() As String = dialog.Split(New String() {Environment.NewLine}, StringSplitOptions.None)
+                            out.AppendLine($"{fileName}<Line{lineNumber.ToString("D8")}>	[texto]")
+                            lineNumber += 1
+    
+                            For Each line As String In lines
+                                out.AppendLine($"{fileName}<Line{lineNumber.ToString("D8")}>	{line.Trim()}")
+                                lineNumber += 1
+                            Next
+    
+                            out.AppendLine($"{fileName}<Line{lineNumber.ToString("D8")}>	[/texto]")
+                            lineNumber += 1
                         Next
+    
                     Case SDT.Vox
+                        Dim lineNumber As Integer = 1
                         For Each dialog As Vox_Dialog In Vox_Dialogs
-                            out.AppendLine("[texto]" & Environment.NewLine & dialog.Text & Environment.NewLine & "[/texto]")
+                            Dim LanguageCode As String = GetLanguageCode(dialog.Language_ID)
+                            Dim lines() As String = dialog.Text.Split(New String() {Environment.NewLine}, StringSplitOptions.None)
+    
+                            out.AppendLine($"{fileName}<Line{lineNumber.ToString("D8")}>	[texto]")
+                            lineNumber += 1
+    
+                            For Each line As String In lines
+                                out.AppendLine($"{fileName}<Line{lineNumber.ToString("D8")}>	{LanguageCode}	{line.Trim()}")
+                                lineNumber += 1
+                            Next
+    
+                            out.AppendLine($"{fileName}<Line{lineNumber.ToString("D8")}>	[/texto]")
+                            lineNumber += 1
                         Next
                 End Select
     
@@ -633,33 +676,115 @@ Public Class FrmMain
         ProgressLog.LogMessage("Batch export completed.")
     End Sub
     
+    ' Precompile regex patterns for reuse
+    Private ReadOnly LinePattern As New Regex("^.+<Line\d+>\t(.+)$", RegexOptions.Compiled)
+    Private ReadOnly LanguageCodePattern As New Regex("^\[([A-Z]{3})\]", RegexOptions.Compiled)
+    
     Private Sub ImportMultipleTXTFiles(folderPath As String)
+        If Not Directory.Exists(folderPath) Then
+            MessageBox.Show("The specified folder does not exist.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            Return
+        End If
+    
+        Dim txtFiles() As String = Directory.GetFiles(folderPath, "*.txt")
+        If txtFiles.Length = 0 Then
+            MessageBox.Show("No .txt files found in the specified folder.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+    
         ShowProgressLog()
         ProgressLog.ResetProgress()
     
-        Dim txtFiles() As String = Directory.GetFiles(folderPath, "*.txt")
-        ProgressLog.LogMessage($"Found {txtFiles.Length} .txt files.")
+        ' Mapping of language codes to Language_ID
+        Dim LanguageMap As New Dictionary(Of String, UInt16) From {
+            {"[SPA]", 5},
+            {"[ITA]", 4},
+            {"[GER]", 3},
+            {"[FER]", 2},
+            {"[ENG]", 1}
+        }
     
-        For i As Integer = 0 To txtFiles.Length - 1
-            Dim txtFile As String = txtFiles(i)
-            ProgressLog.LogMessage($"Processing file: {Path.GetFileName(txtFile)}")
-    
+        For Each txtFile As String In txtFiles
             Try
+                ' Locate the corresponding .sdt file
                 Dim sdtFile As String = Path.Combine(Path.GetDirectoryName(txtFile), Path.GetFileNameWithoutExtension(txtFile) & ".sdt")
                 If Not File.Exists(sdtFile) Then
                     ProgressLog.LogMessage($"Corresponding .sdt file not found for: {Path.GetFileName(txtFile)}")
                     Continue For
                 End If
     
+                ' Open the .sdt file
                 Open(sdtFile, True)
-                Import(txtFile, True)
+    
+                ' Read the .txt file line by line instead of loading the entire file into memory
+                Using reader As New StreamReader(txtFile)
+                    Dim DialogText As New StringBuilder
+                    Dim LanguageCode As String = Nothing
+                    Dim InsideTextoBlock As Boolean = False
+    
+                    While Not reader.EndOfStream
+                        Dim Line As String = reader.ReadLine()
+    
+                        ' Check if we are inside a [texto] block
+                        If Line.Contains("[texto]") Then
+                            InsideTextoBlock = True
+                            Continue While
+                        ElseIf Line.Contains("[/texto]") Then
+                            InsideTextoBlock = False
+    
+                            ' Process the collected dialog text
+                            Select Case Format
+                                Case SDT.Codec
+                                    Dialogs.Add(DialogText.ToString().Trim())
+                                Case SDT.Vox
+                                    Dim Temp() As Vox_Dialog = Vox_Dialogs.ToArray()
+                                    Temp(Vox_Dialogs.Count - 1).Text = DialogText.ToString().Trim()
+    
+                                    ' Assign Language_ID based on the first line's language code
+                                    If LanguageMap.ContainsKey(LanguageCode) Then
+                                        Temp(Vox_Dialogs.Count - 1).Language_ID = LanguageMap(LanguageCode)
+                                    Else
+                                        ProgressLog.LogMessage($"Unknown language code: {LanguageCode}. Using default Language_ID.")
+                                    End If
+    
+                                    Vox_Dialogs = Temp.ToList()
+                            End Select
+    
+                            DialogText.Clear()
+                            LanguageCode = Nothing
+                            Continue While
+                        End If
+    
+                        If InsideTextoBlock Then
+                            ' Extract the relevant part of the line
+                            Dim Match As Match = LinePattern.Match(Line)
+                            If Match.Success Then
+                                Dim LineContent As String = Match.Groups(1).Value
+    
+                                ' Extract the language code from the first line
+                                If LanguageCode Is Nothing Then
+                                    Dim CodeMatch As Match = LanguageCodePattern.Match(LineContent)
+                                    If CodeMatch.Success Then
+                                        LanguageCode = CodeMatch.Value
+                                        LineContent = LineContent.Substring(CodeMatch.Length).Trim()
+                                    End If
+                                End If
+    
+                                ' Append the cleaned-up line to the dialog text
+                                DialogText.AppendLine(LineContent)
+                            End If
+                        End If
+                    End While
+                End Using
+    
+                ' Save the updated .sdt file
                 Save(Current_Opened_File)
                 ProgressLog.LogMessage($"Imported: {Path.GetFileName(txtFile)}")
             Catch ex As Exception
                 ProgressLog.LogMessage($"Error processing file: {Path.GetFileName(txtFile)} - {ex.Message}")
             End Try
     
-            ProgressLog.UpdateProgress(i + 1, txtFiles.Length)
+            ProgressLog.UpdateProgress(Array.IndexOf(txtFiles, txtFile) + 1, txtFiles.Length)
         Next
     
         ProgressLog.LogMessage("Batch import completed.")
