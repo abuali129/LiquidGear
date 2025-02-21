@@ -20,10 +20,10 @@ Public Class ProgressLogForm
     ' Append a message to the log
     Public Sub LogMessage(message As String)
         If LogTextBox.InvokeRequired Then
-            LogTextBox.BeginInvoke(New Action(Of String)(AddressOf LogMessage), message)
+            LogTextBox.Invoke(New Action(Of String)(AddressOf LogMessage), message)
         Else
             _log.AppendLine(message)
-            LogTextBox.AppendText(message & Environment.NewLine)
+            LogTextBox.Text = _log.ToString()
             LogTextBox.SelectionStart = LogTextBox.Text.Length
             LogTextBox.ScrollToCaret()
         End If
