@@ -541,7 +541,22 @@ Public Class FrmMain
                 (Data(Address + 2) * &H100) Or
                 Data(Address + 3)
     End Function
-   
+
+    Private Sub BtnBatchExport_Click(sender As Object, e As EventArgs) Handles BtnBatchExport.Click
+        Dim folderDialog As New FolderBrowserDialog
+        If folderDialog.ShowDialog() = DialogResult.OK Then
+            ExportMultipleSDTFiles(folderDialog.SelectedPath)
+        End If
+    End Sub
+    
+    Private Sub BtnBatchImport_Click(sender As Object, e As EventArgs) Handles BtnBatchImport.Click
+        Dim folderDialog As New FolderBrowserDialog
+        If folderDialog.ShowDialog() = DialogResult.OK Then
+            ImportMultipleTXTFiles(folderDialog.SelectedPath)
+        End If
+    End Sub
+    
+    
     Private ProgressLog As ProgressLogForm
     
     Private Sub ShowProgressLog()
@@ -552,49 +567,27 @@ Public Class FrmMain
         ProgressLog.BringToFront()
     End Sub
     
-    Private Async Sub BtnBatchExport_Click(sender As Object, e As EventArgs) Handles BtnBatchExport.Click
-        Dim folderDialog As New FolderBrowserDialog
-        If folderDialog.ShowDialog() = DialogResult.OK Then
-            ShowProgressLog()
-            ProgressLog.ResetProgress()
-    
-            ' Run the export process in a background thread
-            Await Task.Run(Sub() ExportMultipleSDTFiles(folderDialog.SelectedPath))
-        End If
-    End Sub
-    
-    Private Async Sub BtnBatchImport_Click(sender As Object, e As EventArgs) Handles BtnBatchImport.Click
-        Dim folderDialog As New FolderBrowserDialog
-        If folderDialog.ShowDialog() = DialogResult.OK Then
-            ShowProgressLog()
-            ProgressLog.ResetProgress()
-    
-            ' Run the import process in a background thread
-            Await Task.Run(Sub() ImportMultipleTXTFiles(folderDialog.SelectedPath))
-        End If
-    End Sub
-    
     Private Sub ExportMultipleSDTFiles(folderPath As String)
         If Not Directory.Exists(folderPath) Then
-            ProgressLog.LogMessage("The specified folder does not exist.")
+            MessageBox.Show("The specified folder does not exist.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
             Return
         End If
     
         Dim sdtFiles() As String = Directory.GetFiles(folderPath, "*.sdt")
         If sdtFiles.Length = 0 Then
-            ProgressLog.LogMessage("No .sdt files found in the specified folder.")
+            MessageBox.Show("No .sdt files found in the specified folder.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information)
             Return
         End If
     
-        ProgressLog.LogMessage($"Found {sdtFiles.Length} .sdt files.")
+        ShowProgressLog()
+        ProgressLog.ResetProgress()
     
-        For i As Integer = 0 To sdtFiles.Length - 1
-            Dim sdtFile As String = sdtFiles(i)
-            ProgressLog.LogMessage($"Processing file: {Path.GetFileName(sdtFile)}")
-    
+        For Each sdtFile As String In sdtFiles
             Try
+                ' Open the .sdt file
                 Open(sdtFile, True)
     
+                ' Check if the file contains any dialog texts
                 Dim hasText As Boolean = False
                 Select Case Format
                     Case SDT.Codec
@@ -607,11 +600,13 @@ Public Class FrmMain
                         End If
                 End Select
     
+                ' Skip the file if no text is found
                 If Not hasText Then
                     ProgressLog.LogMessage($"Skipping file (no text found): {Path.GetFileName(sdtFile)}")
                     Continue For
                 End If
     
+                ' Prepare the output text
                 Dim out As New StringBuilder
                 Select Case Format
                     Case SDT.Codec
@@ -624,6 +619,7 @@ Public Class FrmMain
                         Next
                 End Select
     
+                ' Save the .txt file in the same folder
                 Dim txtFile As String = Path.Combine(Path.GetDirectoryName(sdtFile), Path.GetFileNameWithoutExtension(sdtFile) & ".txt")
                 File.WriteAllText(txtFile, out.ToString())
                 ProgressLog.LogMessage($"Exported: {Path.GetFileName(txtFile)}")
@@ -631,24 +627,17 @@ Public Class FrmMain
                 ProgressLog.LogMessage($"Error processing file: {Path.GetFileName(sdtFile)} - {ex.Message}")
             End Try
     
-            ProgressLog.UpdateProgress(i + 1, sdtFiles.Length)
+            ProgressLog.UpdateProgress(Array.IndexOf(sdtFiles, sdtFile) + 1, sdtFiles.Length)
         Next
     
         ProgressLog.LogMessage("Batch export completed.")
     End Sub
     
     Private Sub ImportMultipleTXTFiles(folderPath As String)
-        If Not Directory.Exists(folderPath) Then
-            ProgressLog.LogMessage("The specified folder does not exist.")
-            Return
-        End If
+        ShowProgressLog()
+        ProgressLog.ResetProgress()
     
         Dim txtFiles() As String = Directory.GetFiles(folderPath, "*.txt")
-        If txtFiles.Length = 0 Then
-            ProgressLog.LogMessage("No .txt files found in the specified folder.")
-            Return
-        End If
-    
         ProgressLog.LogMessage($"Found {txtFiles.Length} .txt files.")
     
         For i As Integer = 0 To txtFiles.Length - 1
@@ -675,9 +664,6 @@ Public Class FrmMain
     
         ProgressLog.LogMessage("Batch import completed.")
     End Sub
-    
-    
-    
 
 
 End Class
