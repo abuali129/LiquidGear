@@ -1,4 +1,4 @@
-﻿<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()> _
+<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()> _
 Partial Class FrmMain
     Inherits LiquidGear.gdkForm
 
@@ -20,25 +20,46 @@ Partial Class FrmMain
     <System.Diagnostics.DebuggerStepThrough()> _
     Private Sub InitializeComponent()
         Me.BtnBatchExport = New System.Windows.Forms.Button()
+        Me.BtnBatchExportCodec = New System.Windows.Forms.Button()
         Me.BtnBatchImport = New System.Windows.Forms.Button()
+        Me.BtnBatchImportCodec = New System.Windows.Forms.Button()
         '
         'BtnBatchExport
         '
-        Me.BtnBatchExport.Location = New System.Drawing.Point(300, 100)
+        Me.BtnBatchExport.Location = New System.Drawing.Point(220, 60)
         Me.BtnBatchExport.Name = "BtnBatchExport"
-        Me.BtnBatchExport.Size = New System.Drawing.Size(220, 30)
+        Me.BtnBatchExport.Size = New System.Drawing.Size(180, 30)
         Me.BtnBatchExport.TabIndex = 0
-        Me.BtnBatchExport.Text = "Export text from .sdt"
+        Me.BtnBatchExport.Text = "Export VOX text from .sdt"
         Me.BtnBatchExport.UseVisualStyleBackColor = True
+		
+		
+	    'BtnBatchExportCodec
+        '
+        Me.BtnBatchExportCodec.Location = New System.Drawing.Point(400, 60)
+        Me.BtnBatchExportCodec.Name = "BtnBatchExportCodec"
+        Me.BtnBatchExportCodec.Size = New System.Drawing.Size(180, 30)
+        Me.BtnBatchExportCodec.TabIndex = 0
+        Me.BtnBatchExportCodec.Text = "Export Codec text from .sdt"
+        Me.BtnBatchExportCodec.UseVisualStyleBackColor = True
         '
         'BtnBatchImport
         '
-        Me.BtnBatchImport.Location = New System.Drawing.Point(300, 60)
+        Me.BtnBatchImport.Location = New System.Drawing.Point(220, 100)
         Me.BtnBatchImport.Name = "BtnBatchImport"
-        Me.BtnBatchImport.Size = New System.Drawing.Size(220, 30)
+        Me.BtnBatchImport.Size = New System.Drawing.Size(180, 30)
         Me.BtnBatchImport.TabIndex = 1
-        Me.BtnBatchImport.Text = "Inject text from .txt into .sdt"
+        Me.BtnBatchImport.Text = "Inject VOX text from .txt into .sdt"
         Me.BtnBatchImport.UseVisualStyleBackColor = True
+
+        'BtnBatchImport
+        '
+        Me.BtnBatchImportCodec.Location = New System.Drawing.Point(400, 100)
+        Me.BtnBatchImportCodec.Name = "BtnBatchImportCodec"
+        Me.BtnBatchImportCodec.Size = New System.Drawing.Size(180, 30)
+        Me.BtnBatchImportCodec.TabIndex = 1
+        Me.BtnBatchImportCodec.Text = "Inject Codec text from .txt into .sdt"
+        Me.BtnBatchImportCodec.UseVisualStyleBackColor = True
         '
         'FrmMain
         '
@@ -47,6 +68,8 @@ Partial Class FrmMain
         Me.ClientSize = New System.Drawing.Size(800, 450)
         Me.Controls.Add(Me.BtnBatchImport)
         Me.Controls.Add(Me.BtnBatchExport)
+		Me.Controls.Add(Me.BtnBatchExportCodec)
+		Me.Controls.Add(Me.BtnBatchImportCodec)
         Me.Name = "FrmMain"
         Me.Text = "LiquidGear"
         Me.ResumeLayout(False)
@@ -161,6 +184,8 @@ Partial Class FrmMain
     Friend WithEvents BtnExport As System.Windows.Forms.Button
     Friend WithEvents BtnImport As System.Windows.Forms.Button
     Friend WithEvents BtnBatchExport As Button
+    Friend WithEvents BtnBatchExportCodec As Button
     Friend WithEvents BtnBatchImport As Button
+    Friend WithEvents BtnBatchImportCodec As Button
 
 End Class
